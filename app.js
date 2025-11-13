@@ -1,12 +1,9 @@
-// Importamos los módulos de Firebase desde CDN
+
+// Importamos las funciones necesarias del SDK de Firebase desde CDN
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, getToken, onMessage, isSupported } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-// Import the functions you need from the SDKs you need
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
+// Configuración de Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyBQD6_ItvBA51dhLYzWBH_lDrEn9JglW9o",
     authDomain: "pwa-firebase-kdrz.firebaseapp.com",
@@ -16,43 +13,44 @@ const firebaseConfig = {
     appId: "1:89260580573:web:78aa0be483a34b12438534"
 };
 
-// Initialize Firebase
+// Inicializamos Firebase
 const app = initializeApp(firebaseConfig);
 
 // Utilidades para manipular el DOM
 const $ = (sel) => document.querySelector(sel);
 const log = (m) => ($("#log").textContent += (($("#log").textContent === "—" ? "" : "\n") + m));
 
-// Mostramos el estado inicial del permiso
+// Mostramos el estado inicial del permiso de notificaciones
 $("#perm").textContent = Notification.permission;
 
-// Registramos el Service Worker que manejará las notificaciones en segundo plano
+// Registramos el Service Worker
 let swReg;
-if ('serviceWorker' in navigator) {
-    swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-    console.log('SW registrado:', swReg.scope);
+if ("serviceWorker" in navigator) {
+    swReg = await navigator.serviceWorker.register("./firebase-messaging-sw.js");
+    console.log("Service Worker registrado:", swReg.scope);
 }
 
-// Verificamos si el navegador soporta FCM
+// Verificamos compatibilidad con FCM
 const supported = await isSupported();
 let messaging = null;
 
 if (supported) {
     messaging = getMessaging(app);
+    console.log("FCM soportado y listo.");
 } else {
     log("Este navegador no soporta FCM en la Web.");
 }
 
-// Clave pública VAPID (de Cloud Messaging)
+// Clave pública VAPID obtenida desde Firebase Console → Cloud Messaging
 const VAPID_KEY = "BFMUVM-rTWrhN2dnVcr6gmGoZw_ODuFg0juopTRZRvdmnospojKqLo6qtE_bhAg2wgeDr9RLY4C3LY7ZvSMeu_c";
 
-// Función para pedir permiso al usuario y obtener token
+// Función para pedir permiso al usuario y obtener token FCM
 async function requestPermissionAndGetToken() {
     try {
         const permission = await Notification.requestPermission();
         $("#perm").textContent = permission;
 
-        if (permission !== 'granted') {
+        if (permission !== "granted") {
             log("Permiso denegado por el usuario.");
             return;
         }
@@ -64,22 +62,24 @@ async function requestPermissionAndGetToken() {
 
         if (token) {
             $("#token").textContent = token;
-            log("Token obtenido. Usa este token en Firebase Console → Cloud Messaging.");
+            log("Token obtenido. Usa este token en Firebase Console → Cloud Messaging → Send test message.");
+            console.log("Token:", token);
         } else {
             log("No se pudo obtener el token.");
         }
     } catch (err) {
-        console.error(err);
+        console.error("Error al obtener token:", err);
         log("Error al obtener token: " + err.message);
     }
 }
 
-// Escuchamos mensajes cuando la pestaña está abierta
+// Escuchar mensajes cuando la app está en primer plano
 if (messaging) {
     onMessage(messaging, (payload) => {
-        log("Mensaje en primer plano:\n" + JSON.stringify(payload, null, 2));
+        log("Mensaje recibido en primer plano:\n" + JSON.stringify(payload, null, 2));
+        console.log("Mensaje recibido en primer plano:", payload);
     });
 }
 
-// Vinculamos la función al botón de permiso
+// Vinculamos el botón para habilitar notificaciones
 $("#btn-permission").addEventListener("click", requestPermissionAndGetToken);
